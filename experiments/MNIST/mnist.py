@@ -1,4 +1,5 @@
 import torch
+
 import torch.nn as nn
 import torch.utils.data as Data
 import torchvision
@@ -11,6 +12,7 @@ import time
 import math
 import torch
 import torch.nn as nn
+
 import torch.nn.functional as F
 import torch.nn.functional as F
 from utils.time import timeSince
@@ -19,34 +21,6 @@ torch.manual_seed(0)
 
 #%%
 
-# torch.manual_seed(1)    # reproducible
-
-# Hyper Parameters
-EPOCH = 10
-BATCH_SIZE = 64
-LR = 0.005         # learning rate
-DOWNLOAD_MNIST = True
-N_TEST_IMG = 5
-
-# Mnist digits dataset
-train_data = torchvision.datasets.MNIST(
-    root='./data/mnist/',
-    train=True,                                     # this is training data
-    #transform=torchvision.transforms.ToTensor(),    # Converts a PIL.Image or numpy.ndarray to
-                                                    # torch.FloatTensor of shape (C x H x W) and normalize in the range [0.0, 1.0]
-    download=DOWNLOAD_MNIST,                        # download it if you don't have it
-)
-
-# plot one example
-print(train_data.train_data.size())     # (60000, 28, 28)
-print(train_data.train_labels.size())   # (60000)
-
-# Data Loader for easy mini-batch return in training, the image batch shape will be (50, 1, 28, 28)
-train_loader = Data.DataLoader(dataset=train_data, batch_size=BATCH_SIZE, shuffle=True)
-
-
-
-#%% Transformations used
 
 def multimodal_transformation(input):
 
@@ -57,16 +31,34 @@ def multimodal_transformation(input):
 
     modalities = [modality_0, modality_1]
     modalities = [torchvision.transforms.functional.to_tensor(modality) for modality in modalities]
-    #modalities = [torch.autograd.Variable(modality, requires_grad=True) for modality in modalities]
+    modalities = [torch.autograd.Variable(modality) for modality in modalities]
     return modalities
 
-idx = 0
-input = train_data[idx]
-modalities = multimodal_transformation(input[0])
 
-for modality in modalities:
-    plt.imshow(modality[0,:,:].data.numpy())
-    plt.show()
+# Hyper Parameters
+EPOCH = 10
+BATCH_SIZE = 3
+DOWNLOAD_MNIST = True
+
+
+train_data_transform = torchvision.datasets.MNIST(
+    root='./data/mnist/',
+    train=True,                                     # this is training data
+    transform=multimodal_transformation,    # Converts a PIL.Image or numpy.ndarray to
+                                                    # torch.FloatTensor of shape (C x H x W) and normalize in the range [0.0, 1.0]
+    download=DOWNLOAD_MNIST,                        # download it if you don't have it
+)
+
+
+
+
+
+
+# Data Loader for easy mini-batch return in training, the image batch shape will be (50, 1, 28, 28)
+train_loader = Data.DataLoader(dataset=train_data_transform, batch_size=BATCH_SIZE, shuffle=True)
+
+
+
 
 
 #%% Multi-CNN architecture
@@ -112,6 +104,27 @@ class Image_Decoder(nn.Module):
         return x
 
 
+class Number_Encoder(nn.Module):
+    def __init__(self, dim_input ,dim_latent):
+        super(Number_Encoder, self).__init__()
+        self.fc = nn.Linear(dim_input, dim_latent)
+
+    def forward(self, x):
+        x = self.fc(x)
+        return x
+
+
+class Number_Decoder(nn.Module):
+    def __init__(self, dim_input,dim_latent):
+        super(Number_Decoder, self).__init__()
+        self.fc = nn.Linear(dim_latent, dim_input)
+
+    def forward(self, x):
+        x = self.fc(x)
+        return x
+
+
+
 
 class Autoencoder(nn.Module):
 
@@ -153,20 +166,55 @@ class Autoencoder(nn.Module):
         for decoder in self.decoders:
             decoder.zero_grad()
 
+
+
+
+
+
+dim_input = 10
 dim_latent = 10
 encoder_1 = Image_Encoder(dim_latent)
 encoder_2 = Image_Encoder(dim_latent)
+encoder_3 = Number_Encoder(dim_input, dim_latent)
+
 decoder_1 = Image_Decoder(dim_latent)
 decoder_2 = Image_Decoder(dim_latent)
+decoder_3 = Number_Decoder(dim_input, dim_latent)
 
-encoders = [encoder_1, encoder_2]
-decoders = [decoder_1, decoder_2]
+encoders = [encoder_1, encoder_2, encoder_3]
+decoders = [decoder_1, decoder_2, decoder_3]
 
 
-multi_autoencoder = Autoencoder( encoders, decoders,  dim_latent)
+multi_autoencoder = Autoencoder(encoders, decoders,  dim_latent, batch_size=BATCH_SIZE)
 
 indices = [0,1]
-multi_autoencoder.forward([modalities[0].view(1,1,28,28), modalities[0].view(1,1,28,28)], indices)
+
+
+# Sample
+
+
+for i, (modalities, label) in enumerate(train_loader):
+    print(modalities)
+    if i>1:
+        break
+
+
+for modality in modalities:
+    plt.imshow(modality[0,0,:,:].data.numpy())
+    plt.show()
+
+#%%
+
+batch_size = BATCH_SIZE
+label_onehot = torch.zeros(batch_size, dim_input)
+label_onehot = label_onehot.scatter(1, label.view(-1,1),1)
+
+
+multi_autoencoder.forward([modalities[0],
+                           modalities[1],
+                           label_onehot],
+                          indices)
+
 
 
 
@@ -175,42 +223,48 @@ multi_autoencoder.forward([modalities[0].view(1,1,28,28), modalities[0].view(1,1
 
 
 # Create the NN
+batch_size = BATCH_SIZE
 dim_latent = 10
-batch_size = int(1e2)
 
 # Create the Auto encoder
 encoder_1 = Image_Encoder(dim_latent)
 encoder_2 = Image_Encoder(dim_latent)
+encoder_3 = Number_Encoder(dim_input, dim_latent)
+
 decoder_1 = Image_Decoder(dim_latent)
 decoder_2 = Image_Decoder(dim_latent)
-encoders = [encoder_1, encoder_2]
-decoders = [decoder_1, decoder_2]
-multi_autoencoder = Autoencoder(encoders, decoders,  dim_latent)
+decoder_3 = Number_Decoder(dim_input, dim_latent)
+
+encoders = [encoder_1, encoder_2, encoder_3]
+decoders = [decoder_1, decoder_2, decoder_3]
+
+multi_autoencoder = Autoencoder(encoders, decoders,  dim_latent,  batch_size)
 
 
 ## Launch parameters
-lr = 0.0005
-criterion = nn.MSELoss()
+lr = 0.001
+criterion_img = nn.MSELoss()
+criterion_number = nn.CrossEntropyLoss()
 optimizers_encoders = [optim.Adam(encoder.parameters(), lr=lr) for encoder in multi_autoencoder.encoders]
 optimizers_decoders = [optim.Adam(decoder.parameters(), lr=lr) for decoder in multi_autoencoder.decoders]
 optimizers = optimizers_encoders+optimizers_decoders
 
-
-n_iter = int(2e3)
 n_epoch = 10
 
 start = time.time()
 
 
 for epoch in range(n_epoch):
-    for i in range(n_iter):
+    for i, (img_modalities, label) in enumerate(train_loader):
 
-        input = train_data[i]
-        modalities = multimodal_transformation(input[0])
-        modalities = [modality.view(1, 1, 28, 28) for modality in modalities]
+        # Add the label
+        label_onehot = torch.zeros(batch_size, dim_input)
+        label_onehot = label_onehot.scatter(1, label.view(-1, 1), 1)
 
-        #indices = np.unique(np.random.choice((0,1,2), 3))
-        indices = [0, 1]
+        modalities = img_modalities+[torch.FloatTensor(label_onehot).view(batch_size, 1, dim_input)]
+
+        #indices = [1,2]
+        indices = np.unique(np.random.choice((1, 2), 2))
 
         # Randomly remove modalities
 
@@ -219,11 +273,74 @@ for epoch in range(n_epoch):
         loss = 0
 
         output = multi_autoencoder(modalities, indices)
-        loss = criterion(output[0], modalities[0])+criterion(output[1], modalities[1])
+        losses = [criterion_img(output[0], modalities[0]),
+               criterion_img(output[1], modalities[1]),
+               criterion_number(output[2].view(batch_size, dim_input), label)]
+
+        for idx in indices:
+            loss+=losses[idx]
+
 
         # Gradient step
         loss.backward()
         for optimizer in optimizers:
             optimizer.step()
 
+        if i>500:
+            break
+
+    plot_reconstruction(multi_autoencoder, (img_modalities, label),
+                        indices, epoch, batch_limit=3)
+
     print("Epoch {0}, {1} : {2}".format(epoch, timeSince(start), loss.data.view(-1).numpy()[0]))
+
+#%% Test the results
+
+
+def plot_reconstruction(multi_autoencoder, sample,
+                        indices, batch_size, epoch=0, batch_limit=1, plot=False):
+
+    # Process input data
+    (img_modalities, label) = sample
+
+    label_onehot = torch.zeros(batch_size, 10)
+    label_onehot = label_onehot.scatter(1, label.view(-1, 1), 1)
+
+    modalities = img_modalities + [torch.FloatTensor(label_onehot.numpy()).view(batch_size, 1, dim_input)]
+    output = multi_autoencoder(modalities, indices)
+
+    batch_plot = min(batch_limit, multi_autoencoder.batch_size)
+
+    fig, axes = plt.subplots(2*batch_limit,3, figsize=(10,batch_plot*5))
+
+    for batch in range(batch_limit):
+
+        for j, modality in enumerate([modalities[idx] for idx in [0,1]]):
+            axes[2*batch, j].imshow(modality[batch,0,:,:].data.numpy())
+            if j>1:
+                break
+
+        for j, output_modality in enumerate([output[idx] for idx in [0,1]]):
+            axes[2*batch+1, j].imshow(output_modality[batch,0, :, :].data.numpy())
+            if j>1:
+                break
+
+        axes[2*batch, 2].bar(range(0, 10),label_onehot[batch, :].data.numpy())
+        axes[2*batch+1, 2].bar(range(0, 10),output[2][batch, 0, :].data.numpy())
+
+    plt.tight_layout()
+    plt.savefig('./experiments/MNIST/output/mnist_epoch{0}.pdf'.format(epoch))
+    if plot:
+        plt.show()
+
+
+#%% Test the plot
+for i, sample in enumerate(train_loader):
+    print(modalities)
+    if i>1:
+        break
+
+
+indices = [2]
+plot_reconstruction(multi_autoencoder, sample, indices,batch_size, batch_limit=3, plot=True)
+
