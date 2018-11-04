@@ -157,8 +157,8 @@ def plot_reconstruction(multi_autoencoder, modality, epoch=0, batch_limit=1, plo
 
     for batch in range(batch_limit):
 
-            axes[batch, 0].imshow(modality[batch,0,:,:].data.cpu.numpy())
-            axes[batch, 1].imshow(output[batch,0, :, :].data.cpu.numpy())
+            axes[batch, 0].imshow(modality[batch,0,:,:].data.cpu().numpy())
+            axes[batch, 1].imshow(output[batch,0, :, :].data.cpu().numpy())
 
 
     plt.tight_layout()
