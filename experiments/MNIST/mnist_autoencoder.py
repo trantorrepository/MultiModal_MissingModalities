@@ -157,8 +157,8 @@ def plot_reconstruction(multi_autoencoder, modality, epoch=0, batch_limit=1, plo
 
     for batch in range(batch_limit):
 
-            axes[batch, 0].imshow(modality[batch,0,:,:].data.numpy())
-            axes[batch, 1].imshow(output[batch,0, :, :].data.numpy())
+            axes[batch, 0].imshow(modality[batch,0,:,:].data.cpu.numpy())
+            axes[batch, 1].imshow(output[batch,0, :, :].data.cpu.numpy())
 
 
     plt.tight_layout()
@@ -220,23 +220,3 @@ for epoch in range(n_epoch):
     plot_reconstruction(multi_autoencoder, modality, epoch=epoch, batch_limit=8, plot=False)
     print("Epoch {0}, {1} : {2}".format(epoch, timeSince(start), loss.data.view(-1).cpu().numpy()[0]))
 
-
-
-
-#%% Test the plot
-
-for i, (img_modalities, label) in enumerate(train_loader):
-    if i>1:
-        break
-
-
-modality = img_modalities[1]
-output = multi_autoencoder(modality)
-
-idx = 0
-fig, axes = plt.subplots(2,1)
-
-axes[0].imshow(modality[0,0,:,:].data.numpy())
-axes[1].imshow(output[0,0,:,:].data.numpy())
-
-plt.show()
