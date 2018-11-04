@@ -21,3 +21,13 @@ experiments/MNIST/data/mnist/raw/t10k-images-idx3-ubyte
 experiments/MNIST/data/mnist/raw/t10k-labels-idx1-ubyte
 experiments/MNIST/data/mnist/raw/train-images-idx3-ubyte
 experiments/MNIST/data/mnist/raw/train-labels-idx1-ubyte
+experiments/MNIST/output/mnist_epoch10.pdf
+experiments/MNIST/output/mnist_epoch11.pdf
+experiments/MNIST/output/mnist_epoch12.pdf
+experiments/MNIST/output/mnist_epoch13.pdf
+experiments/MNIST/output/mnist_epoch14.pdf
+experiments/MNIST/output/mnist_epoch15.pdf
+experiments/MNIST/output/mnist_epoch16.pdf
+experiments/MNIST/output/mnist_epoch17.pdf
+experiments/MNIST/output/mnist_epoch18.pdf
+experiments/MNIST/output/mnist_epoch19.pdf
