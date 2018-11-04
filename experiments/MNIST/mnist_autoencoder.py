@@ -161,7 +161,8 @@ def plot_reconstruction(multi_autoencoder, modality, epoch=0, batch_limit=1, plo
 
 
     plt.tight_layout()
-    plt.savefig('/Users/raphael.couronne/Programming/ARAMIS/Projects/MultiModal_MissingModalities/experiments/MNIST/output/basic_mnist_epoch{0}.pdf'.format(epoch))
+    plt.savefig('./experiments/MNIST/output/basic_mnist_epoch{0}.pdf')
+
     if plot:
         plt.show()
 
