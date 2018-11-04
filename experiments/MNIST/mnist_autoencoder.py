@@ -132,7 +132,8 @@ class Autoencoder(nn.Module):
 
 
 
-dim_input = 10
+
+
 dim_latent = 10
 encoder = Image_Encoder(dim_latent)
 decoder = Image_Decoder(dim_latent)
@@ -152,16 +153,16 @@ def plot_reconstruction(multi_autoencoder, modality, epoch=0, batch_limit=1, plo
 
     batch_plot = min(batch_limit, multi_autoencoder.batch_size)
 
-    fig, axes = plt.subplots(2*batch_limit,2, figsize=(10,batch_plot*5))
+    fig, axes = plt.subplots(batch_limit,2, figsize=(10,batch_plot*5))
 
     for batch in range(batch_limit):
 
-            axes[2*batch, 0].imshow(modality[batch,0,:,:].data.numpy())
-            axes[2*batch, 1].imshow(output[batch,0, :, :].data.numpy())
+            axes[batch, 0].imshow(modality[batch,0,:,:].data.numpy())
+            axes[batch, 1].imshow(output[batch,0, :, :].data.numpy())
 
 
     plt.tight_layout()
-    plt.savefig('./experiments/MNIST/output/basic_mnist_epoch{0}.pdf')
+    plt.savefig('./experiments/MNIST/output/basic_mnist_epoch{0}.pdf'.format(epoch))
 
     if plot:
         plt.show()
@@ -171,7 +172,6 @@ def plot_reconstruction(multi_autoencoder, modality, epoch=0, batch_limit=1, plo
 # Create the NN
 use_gpu = False
 batch_size = BATCH_SIZE
-dim_input = 10
 dim_latent = 10
 encoder = Image_Encoder(dim_latent)
 decoder = Image_Decoder(dim_latent)
@@ -182,9 +182,6 @@ multi_autoencoder = Autoencoder(encoder, decoder,  dim_latent, batch_size=BATCH_
 lr = 0.005
 criterion_img = nn.MSELoss()
 criterion_number = nn.CrossEntropyLoss()
-#optimizers_encoders = [optim.Adam(multi_autoencoder.encoder.parameters(), lr=lr)]
-#optimizers_decoders = [optim.Adam(multi_autoencoder.decoder.parameters(), lr=lr)]
-#optimizers = optimizers_encoders+optimizers_decoders
 optimizer = optim.Adam(multi_autoencoder.parameters(), lr=lr)
 
 n_epoch = 10
@@ -217,10 +214,10 @@ for epoch in range(n_epoch):
         loss.backward()
         optimizer.step()
 
-        if i>500:
+        if i>50:
             break
 
-    plot_reconstruction(multi_autoencoder, modality, epoch=epoch, batch_limit=4, plot=False)
+    plot_reconstruction(multi_autoencoder, modality, epoch=epoch, batch_limit=8, plot=False)
     print("Epoch {0}, {1} : {2}".format(epoch, timeSince(start), loss.data.view(-1).cpu().numpy()[0]))
 
 
