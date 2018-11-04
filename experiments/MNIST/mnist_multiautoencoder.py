@@ -323,8 +323,8 @@ for epoch in range(n_epoch):
         for optimizer in optimizers:
             optimizer.step()
 
-        if i>500:
-            break
+        #if i>500:
+        #    break
 
     plot_reconstruction(multi_autoencoder, (img_modalities, label),
                         indices, batch_size, epoch, batch_limit=3)

@@ -91,9 +91,9 @@ class Image_Decoder(nn.Module):
 
         # Encoder
         self.fc = nn.Linear(dim_latent,2*2*8)
-        self.deconv3 = nn.ConvTranspose2d(in_channels=8,out_channels=16, kernel_size=2, stride=2)
-        self.deconv2 = nn.ConvTranspose2d(in_channels=16,out_channels=8, kernel_size=4,stride=3, padding = 1)
-        self.deconv1 = nn.ConvTranspose2d(in_channels=8,out_channels=1, kernel_size=2, stride=3, padding = 2)
+        self.deconv3 = nn.ConvTranspose2d(in_channels=8,out_channels=16, kernel_size=3, stride=2)
+        self.deconv2 = nn.ConvTranspose2d(in_channels=16,out_channels=8, kernel_size=5,stride=3, padding = 1)
+        self.deconv1 = nn.ConvTranspose2d(in_channels=8,out_channels=1, kernel_size=2, stride=2, padding = 1)
 
     def forward(self, x):
         x = self.fc(x)
@@ -102,8 +102,6 @@ class Image_Decoder(nn.Module):
         x = F.relu(self.deconv2(x)) # torch.Size([32, 12, 14, 14])
         x = F.sigmoid(self.deconv1(x)) # torch.Size([32, 1, 28, 28])
         return x
-
-
 
 
 
@@ -148,6 +146,27 @@ multi_autoencoder = Autoencoder(encoder, decoder,  dim_latent, batch_size=BATCH_
 
 
 
+def plot_reconstruction(multi_autoencoder, modality, epoch=0, batch_limit=1, plot=False):
+
+    output = multi_autoencoder(modality)
+
+    batch_plot = min(batch_limit, multi_autoencoder.batch_size)
+
+    fig, axes = plt.subplots(2*batch_limit,2, figsize=(10,batch_plot*5))
+
+    for batch in range(batch_limit):
+
+            axes[2*batch, 0].imshow(modality[batch,0,:,:].data.numpy())
+            axes[2*batch, 1].imshow(output[batch,0, :, :].data.numpy())
+
+
+    plt.tight_layout()
+    plt.savefig('/Users/raphael.couronne/Programming/ARAMIS/Projects/MultiModal_MissingModalities/experiments/MNIST/output/basic_mnist_epoch{0}.pdf'.format(epoch))
+    if plot:
+        plt.show()
+
+
+
 # Create the NN
 use_gpu = False
 batch_size = BATCH_SIZE
@@ -159,7 +178,7 @@ multi_autoencoder = Autoencoder(encoder, decoder,  dim_latent, batch_size=BATCH_
 
 
 ## Launch parameters
-lr = 0.01
+lr = 0.005
 criterion_img = nn.MSELoss()
 criterion_number = nn.CrossEntropyLoss()
 #optimizers_encoders = [optim.Adam(multi_autoencoder.encoder.parameters(), lr=lr)]
@@ -171,6 +190,8 @@ n_epoch = 10
 
 start = time.time()
 
+if use_gpu:
+    multi_autoencoder=multi_autoencoder.cuda()
 
 for epoch in range(n_epoch):
     for i, (img_modalities, label) in enumerate(train_loader):
@@ -195,11 +216,11 @@ for epoch in range(n_epoch):
         loss.backward()
         optimizer.step()
 
-        if i>1000:
+        if i>500:
             break
 
-
-    print("Epoch {0}, {1} : {2}".format(epoch, timeSince(start), loss.data.view(-1).numpy()[0]))
+    plot_reconstruction(multi_autoencoder, modality, epoch=epoch, batch_limit=4, plot=False)
+    print("Epoch {0}, {1} : {2}".format(epoch, timeSince(start), loss.data.view(-1).cpu().numpy()[0]))
 
 
 
@@ -221,4 +242,3 @@ axes[0].imshow(modality[0,0,:,:].data.numpy())
 axes[1].imshow(output[0,0,:,:].data.numpy())
 
 plt.show()
-
